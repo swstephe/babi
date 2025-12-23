@@ -1,7 +1,15 @@
 from __future__ import annotations
 
-import parsy
-from parsy import Parser, any_char, regex, seq, string
+from parsy import (
+    Parser,
+    Result,
+    any_char,
+    forward_declaration,
+    regex,
+    seq,
+    string,
+    success,
+)
 
 __all__ = ["parser"]
 
@@ -13,50 +21,50 @@ def _and(p: Parser) -> Parser:
     def and_parser(stream, index):
         res = p(stream, index)
         if res.status:
-            return parsy.Result.success(index, True)
+            return Result.success(index, True)
         return res
     return and_parser
 
 def _not(p: Parser) -> Parser:
     return p.should_fail('not').result(True)
 
-Grammar: Parser = parsy.forward_declaration()
-Definition: Parser = parsy.forward_declaration()
-Expression: Parser = parsy.forward_declaration()
-Sequence: Parser = parsy.forward_declaration()
-Prefix: Parser = parsy.forward_declaration()
-Suffix: Parser = parsy.forward_declaration()
-Primary: Parser = parsy.forward_declaration()
-Identifier: Parser = parsy.forward_declaration()
-IdentStart: Parser = parsy.forward_declaration()
-IdentCont: Parser = parsy.forward_declaration()
-Literal: Parser = parsy.forward_declaration()
-SingleQuoted: Parser = parsy.forward_declaration()
-DoubleQuoted: Parser = parsy.forward_declaration()
-CharSingle: Parser = parsy.forward_declaration()
-CharDouble: Parser = parsy.forward_declaration()
-Escape: Parser = parsy.forward_declaration()
-Hex: Parser = parsy.forward_declaration()
-Class: Parser = parsy.forward_declaration()
-ClassItem: Parser = parsy.forward_declaration()
-Range: Parser = parsy.forward_declaration()
-ClassChar: Parser = parsy.forward_declaration()
-LEFTARROW: Parser = parsy.forward_declaration()
-SLASH: Parser = parsy.forward_declaration()
-AND: Parser = parsy.forward_declaration()
-NOT: Parser = parsy.forward_declaration()
-QUESTION: Parser = parsy.forward_declaration()
-STAR: Parser = parsy.forward_declaration()
-PLUS: Parser = parsy.forward_declaration()
-OPEN: Parser = parsy.forward_declaration()
-CLOSE: Parser = parsy.forward_declaration()
-DOT: Parser = parsy.forward_declaration()
-Spacing: Parser = parsy.forward_declaration()
-Space: Parser = parsy.forward_declaration()
-Comment: Parser = parsy.forward_declaration()
-EndOfFile: Parser = parsy.forward_declaration()
+Grammar = forward_declaration()
+Definition = forward_declaration()
+Expression = forward_declaration()
+Sequence = forward_declaration()
+Prefix = forward_declaration()
+Suffix = forward_declaration()
+Primary = forward_declaration()
+Identifier = forward_declaration()
+IdentStart = forward_declaration()
+IdentCont = forward_declaration()
+Literal = forward_declaration()
+SingleQuoted = forward_declaration()
+DoubleQuoted = forward_declaration()
+CharSingle = forward_declaration()
+CharDouble = forward_declaration()
+Escape = forward_declaration()
+Hex = forward_declaration()
+Class = forward_declaration()
+ClassItem = forward_declaration()
+Range = forward_declaration()
+ClassChar = forward_declaration()
+LEFTARROW = forward_declaration()
+SLASH = forward_declaration()
+AND = forward_declaration()
+NOT = forward_declaration()
+QUESTION = forward_declaration()
+STAR = forward_declaration()
+PLUS = forward_declaration()
+OPEN = forward_declaration()
+CLOSE = forward_declaration()
+DOT = forward_declaration()
+Spacing = forward_declaration()
+Space = forward_declaration()
+Comment = forward_declaration()
+EOF = forward_declaration()
 
-Grammar.become((seq(Spacing, (Definition).at_least(1), EndOfFile).map(lambda xs: list(xs))).map(lambda v: _tag("Grammar", v)))
+Grammar.become((seq(Spacing, (Definition).at_least(1), EOF).map(lambda xs: list(xs))).map(lambda v: _tag("Grammar", v)))
 Definition.become((seq(Identifier, LEFTARROW, Expression).map(lambda xs: list(xs))).map(lambda v: _tag("Definition", v)))
 Expression.become((seq(Sequence, (seq(SLASH, Sequence).map(lambda xs: list(xs))).many()).map(lambda xs: list(xs))).map(lambda v: _tag("Expression", v)))
 Sequence.become((seq((Prefix).many()).map(lambda xs: list(xs))).map(lambda v: _tag("Sequence", v)))

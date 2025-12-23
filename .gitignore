@@ -1,5 +1,5 @@
-.coverage/
 .idea/
 .qodo/
 .vscode/
 __pycache__/
+.coverage

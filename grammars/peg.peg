@@ -2,22 +2,19 @@
 #
 # Syntax is modeled after classic PEG definitions.
 
-
 grammar        <- definition+ EOF
-definition     <- identifier LEFTARROW expression
-expression     <- sequence (SLASH Sequence)*
+definition     <- identifier '<-' expression
+expression     <- sequence ('/' Sequence)*
 sequence       <- prefix*
 prefix         <- (AND / NOT)? suffix
 suffix         <- primary (QUESTION / STAR / PLUS)?
-primary        <- identifier !LEFTARROW
-              / OPEN expression CLOSE
+primary        <- identifier !'<-'
+              / '(' expression ')'
               / literal
               / class
               / DOT
 
-identifier     <- ident_start ident_cont* spacing
-ident_start    <- [A-Za-z_]
-ident_cont     <- [A-Za-z0-9_]
+identifier     <- [A-Za-z_] [A-Za-z0-9_]* spacing
 
 literal        <- single_quoted / double_quoted
 single_quoted  <- '\'' char_single* '\'' spacing
@@ -35,15 +32,15 @@ class_char     <- escape / (!']' .)
 spacing        <- (_ / comment)*
 comment        <- '#' (!'\n' .)* ('\n' / EOF)
 
-LEFTARROW      <- '<-' Spacing
-SLASH          <- '/' Spacing
-AND            <- '&' Spacing
-NOT            <- '!' Spacing
-QUESTION       <- '?' Spacing
-STAR           <- '*' Spacing
-PLUS           <- '+' Spacing
-OPEN           <- '(' Spacing
-CLOSE          <- ')' Spacing
-DOT            <- '.' Spacing
+LEFTARROW      <- '<-' spacing
+SLASH          <- '/' spacing
+AND            <- '&' spacing
+NOT            <- '!' spacing
+QUESTION       <- '?' spacing
+STAR           <- '*' spacing
+PLUS           <- '+' spacing
+OPEN           <- '(' spacing
+CLOSE          <- ')' spacing
+DOT            <- '.' spacing
 _              <- [ \t\n\r]
 EOF            <- !.

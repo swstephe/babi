@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import click
+import msgspec
 
 from babi.codegen import generate_parser
 from babi.peg_parser import parse_peg
@@ -21,19 +22,26 @@ def parse(input: str):
     """Parse a PEG grammar and emit AST JSON"""
     text = Path(input).read_text(encoding="utf-8")
     ast = parse_peg(text)
-    json.dump(ast, sys.stdout, indent=2, ensure_ascii=False)
+    try:
+        sys.stdout.buffer.write(msgspec.json.encode(ast))
+        sys.stdout.write("\n")
+    except BrokenPipeError:
+        return 0
     return 0
 
 
 @babi.command()
 @click.argument("input")
 @click.option("--lang", type=click.Choice(["python", "ts"]), required=True)
-def generate(grammar: str, lang: str):
+def generate(input: str, lang: str):
     """Generate parser source code from a PEG grammar"""
-    text = Path(grammar).read_text(encoding="utf-8")
+    text = Path(input).read_text(encoding="utf-8")
     ast = parse_peg(text)
-    out = generate_parser(ast=ast, lang=lang)
-    sys.stdout.write(out)
+    out = generate_parser(ast=msgspec.to_builtins(ast), lang=lang)
+    try:
+        sys.stdout.write(out)
+    except BrokenPipeError:
+        return 0
     return 0
 
 
@@ -47,7 +55,7 @@ def selfhost(repo_root: str):
 
     text = grammar_path.read_text(encoding="utf-8")
     ast = parse_peg(text)
-    code = generate_parser(ast=ast, lang="python")
+    code = generate_parser(ast=msgspec.to_builtins(ast), lang="python")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.with_suffix(out_path.suffix + ".tmp")
@@ -58,4 +66,8 @@ def selfhost(repo_root: str):
 
 
 if __name__ == "__main__":
+    main()
+
+
+def main() -> None:
     babi()

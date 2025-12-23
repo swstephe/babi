@@ -1,62 +1,50 @@
 from __future__ import annotations
+from typing import Literal
+
+import msgspec
 
 Json = None | bool | int | float | str | list["Json"] | dict[str, "Json"]
-
 
 # The public AST is JSON-serializable (plain dict/list primitives).
 # This module only centralizes the shape constructors.
 
-def rule(name: str, expr: Json) -> dict[str, Json]:
-    return {"type": "rule", "name": name, "expr": expr}
+
+class Dot(msgspec.Struct, tag=True):
+    pass
 
 
-def choice(alts: list[Json]) -> dict[str, Json]:
-    return {"type": "choice", "alts": alts}
+class Range(msgspec.Struct, tag=True):
+    start: str
+    end: str
 
 
-def sequence(items: list[Json]) -> dict[str, Json]:
-    return {"type": "sequence", "items": items}
+class CC(msgspec.Struct, tag=True):
+    parts: list[str | Range]
+    negated: bool = False
 
 
-def andp(expr: Json) -> dict[str, Json]:
-    return {"type": "and", "expr": expr}
+class Identifier(msgspec.Struct, tag=True):
+    identifier: str
 
 
-def notp(expr: Json) -> dict[str, Json]:
-    return {"type": "not", "expr": expr}
+class Term(msgspec.Struct, tag=True):
+    term: Identifier | Expression | CC | Dot | str
+    prefix: Literal['&', '!', None] = None
+    suffix: Literal['?', '*', '+', None] = None
 
 
-def opt(expr: Json) -> dict[str, Json]:
-    return {"type": "opt", "expr": expr}
+class Sequence(msgspec.Struct, tag=True):
+    expressions: list[Term]
 
 
-def star(expr: Json) -> dict[str, Json]:
-    return {"type": "star", "expr": expr}
+class Expression(msgspec.Struct, tag=True):
+    sequences: list[Sequence]
 
 
-def plus(expr: Json) -> dict[str, Json]:
-    return {"type": "plus", "expr": expr}
+class Definition(msgspec.Struct, tag=True):
+    identifier: Identifier
+    expression: Expression
 
 
-def ref(name: str) -> dict[str, Json]:
-    return {"type": "ref", "name": name}
-
-
-def literal(value: str) -> dict[str, Json]:
-    return {"type": "literal", "value": value}
-
-
-def char_class(parts: list[Json], negated: bool = False) -> dict[str, Json]:
-    return {"type": "class", "negated": negated, "parts": parts}
-
-
-def class_range(start: str, end: str) -> dict[str, Json]:
-    return {"type": "range", "start": start, "end": end}
-
-
-def class_char(ch: str) -> dict[str, Json]:
-    return {"type": "char", "value": ch}
-
-
-def dot() -> dict[str, Json]:
-    return {"type": "dot"}
+class Grammar(msgspec.Struct, tag=True):
+    definitions: list[Definition]

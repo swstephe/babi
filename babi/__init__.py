@@ -1,3 +1,3 @@
-__all__ = ["parse_peg"]
+__all__ = ["parse"]
 
-from babi.peg_parser import parse_peg
+from babi.peg_parser import parse
