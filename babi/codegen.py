@@ -1,10 +1,15 @@
 from __future__ import annotations
-from typing import Literal
+from typing import Generator, Literal
+
+from babi.peg_ast import (
+    Grammar,
+    Identifier,
+)
 
 Languages = Literal["python", "ts"]
 
 
-def generate_parser(*, ast: dict, lang: Languages) -> str:
+def generate_parser(*, ast: Grammar, lang: Languages) -> Generator[str, None, None]:
     if ast.get("type") != "grammar":
         raise ValueError("expected grammar AST")
     rules = ast.get("rules")
@@ -12,13 +17,13 @@ def generate_parser(*, ast: dict, lang: Languages) -> str:
         raise ValueError("grammar has no rules")
 
     if lang == "python":
-        return _generate_python(ast)
+        yield from _generate_python(ast)
     if lang == "ts":
-        return _generate_ts(ast)
+        yield from _generate_ts(ast)
     raise ValueError(f"unknown lang: {lang}")
 
 
-def _collect_rules(ast: dict) -> list[tuple[str, dict]]:
+def _collect_rules(ast: Grammar) -> list[tuple[str, dict]]:
     out: list[tuple[str, dict]] = []
     for r in ast["rules"]:
         if not isinstance(r, dict) or r.get("type") != "rule":
@@ -29,38 +34,37 @@ def _collect_rules(ast: dict) -> list[tuple[str, dict]]:
     return out
 
 
-def _generate_python(ast: dict) -> str:
+def _generate_python(ast: Grammar) -> Generator[str, None, None]:
     rules = _collect_rules(ast)
     rule_names = [name for name, _ in rules]
     start = rule_names[0]
 
-    lines: list[str] = []
-    lines.append("from __future__ import annotations")
-    lines.append("")
-    lines.append("import parsy")
-    lines.append("from parsy import Parser, any_char, generate, regex, seq, string")
-    lines.append("")
-    lines.append("__all__ = [\"parser\"]")
-    lines.append("")
-    lines.append("def _tag(name: str, value):")
-    lines.append("    return {\"type\": name, \"value\": value}")
-    lines.append("")
-    lines.append("def _and(p: Parser) -> Parser:")
-    lines.append("    @Parser")
-    lines.append("    def and_parser(stream, index):")
-    lines.append("        res = p(stream, index)")
-    lines.append("        if res.status:")
-    lines.append("            return parsy.Result.success(index, True)")
-    lines.append("        return res")
-    lines.append("    return and_parser")
-    lines.append("")
-    lines.append("def _not(p: Parser) -> Parser:")
-    lines.append("    return p.should_fail('not').result(True)")
-    lines.append("")
+    yield "from __future__ import annotations"
+    yield ""
+    yield "import parsy"
+    yield "from parsy import Parser, any_char, generate, regex, seq, string"
+    yield ""
+    yield "__all__ = [\"parser\"]"
+    yield ""
+    yield "def _tag(name: str, value):"
+    yield "    return {\"type\": name, \"value\": value}"
+    yield ""
+    yield "def _and(p: Parser) -> Parser:"
+    yield "    @Parser"
+    yield "    def and_parser(stream, index):"
+    yield "        res = p(stream, index)"
+    yield "        if res.status:"
+    yield "            return parsy.Result.success(index, True)"
+    yield "        return res"
+    yield "    return and_parser"
+    yield ""
+    yield "def _not(p: Parser) -> Parser:"
+    yield "    return p.should_fail('not').result(True)"
+    yield ""
 
     for name in rule_names:
-        lines.append(f"{name}: Parser = parsy.forward_declaration()")
-    lines.append("")
+        yield f"{name}: Parser = parsy.forward_declaration()"
+    yield ""
 
     def emit_expr(e: dict) -> str:
         t = e.get("type")
@@ -126,32 +130,31 @@ def _generate_python(ast: dict) -> str:
 
     for name, expr in rules:
         rhs = emit_expr(expr)
-        lines.append(f"{name}.become(({rhs}).map(lambda v: _tag(\"{name}\", v)))")
+        yield f"{name}.become(({rhs}).map(lambda v: _tag(\"{name}\", v)))"
 
-    lines.append("")
-    lines.append(f"parser: Parser = {start}")
-    lines.append("")
-    return "\n".join(lines) + "\n"
+    yield ""
+    yield f"parser: Parser = {start}"
+    yield ""
 
 
-def _generate_ts(ast: dict) -> str:
+def _generate_ts(ast: dict) -> Generator[str, None, None]:
     rules = _collect_rules(ast)
     rule_names = [name for name, _ in rules]
     start = rule_names[0]
 
     lines: list[str] = []
-    lines.append("import * as P from 'parsimmon';")
-    lines.append("")
-    lines.append("type Json = null | boolean | number | string | Json[] | { [k: string]: Json };")
-    lines.append("")
-    lines.append("const _tag = (name: string, value: Json): Json => ({ type: name, value });")
-    lines.append("")
+    yield "import * as P from 'parsimmon';"
+    yield ""
+    yield "type Json = null | boolean | number | string | Json[] | { [k: string]: Json };"
+    yield ""
+    yield "const _tag = (name: string, value: Json): Json => ({ type: name, value });"
+    yield ""
 
     for name in rule_names:
-        lines.append(f"const {name}: P.Parser<Json> = P.lazy(() => _{name});")
-    lines.append("")
+        yield f"const {name}: P.Parser<Json> = P.lazy(() => _{name});"
+    yield ""
 
-    def emit_expr(e: Dict) -> str:
+    def emit_expr(e: dict) -> str:
         t = e.get("type")
         if t == "ref":
             return e["name"]
@@ -216,9 +219,8 @@ def _generate_ts(ast: dict) -> str:
 
     for name, expr in rules:
         rhs = emit_expr(expr)
-        lines.append(f"const _{name}: P.Parser<Json> = ({rhs}).map(v => _tag('{name}', v as Json));")
+        yield f"const _{name}: P.Parser<Json> = ({rhs}).map(v => _tag('{name}', v as Json));"
 
-    lines.append("")
-    lines.append(f"export const parser: P.Parser<Json> = {start};")
-    lines.append("")
-    return "\n".join(lines) + "\n"
+    yield ""
+    yield f"export const parser: P.Parser<Json> = {start};"
+    yield ""
