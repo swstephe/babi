@@ -220,7 +220,7 @@ def test_peg_peg():
     assert peg_parser.parse(peg) == {
         "Grammar": [[
             Node(Reference("Definition"), suffix="+"),
-            Node(EOF()),
+            Node(Dot(), prefix="!"),
         ]],
         "Definition": [[
             Node(Reference("Identifier")),
@@ -240,7 +240,7 @@ def test_peg_peg():
                 [Node(Reference("AND"))],
                 [Node(Reference("NOT"))],
             ], suffix="?"),
-            Node(Reference("Primary")),
+            Node(Reference("Suffix")),
         ]],
         "Suffix": [[
             Node(Reference("Primary")),
@@ -252,7 +252,11 @@ def test_peg_peg():
         ]],
         "Primary": [
             [Node(Reference("Identifier")), Node(LiteralString("<-"), prefix="!")],
-            [Node([[Node(LiteralString("(")), Node(Reference("Expression")), Node(LiteralString(")"))]])],
+            [
+                Node(LiteralString("(")),
+                Node(Reference("Expression")),
+                Node(LiteralString(")"))
+            ],
             [Node(Reference("Literal"))],
             [Node(Reference("Class"))],
             [Node(Reference("DOT"))],
@@ -267,29 +271,32 @@ def test_peg_peg():
             Node(LiteralString("'")),
             Node(Reference("CharSingle"), suffix="*"),
             Node(LiteralString("'")),
+            Node(Reference("Spacing")),
         ]],
         "DoubleQuoted": [[
             Node(LiteralString('"')),
             Node(Reference("CharDouble"), suffix="*"),
             Node(LiteralString('"')),
+            Node(Reference("Spacing")),
         ]],
         "CharSingle": [[Node(Reference("Escape"))], [Node([[
-            Node(LiteralString('"'), prefix="!"),
-        ]])]],
-        "CharDouble": [[Node(Reference("Escape"))], [Node([[
             Node(LiteralString("'"), prefix="!"),
             Node(Dot()),
         ]])]],
+        "CharDouble": [[Node(Reference("Escape"))], [Node([[
+            Node(LiteralString('"'), prefix="!"),
+            Node(Dot()),
+        ]])]],
         "Escape": [[
-            Node(LiteralString("\\")),
+            Node(LiteralString("\\\\")),
             Node([
-                [Node(CharClass(["'", '"', "\\", "n", "r", "t"]))],
+                [Node(CharClass(["'", '"', "\\\\", "n", "r", "t"]))],
                 [
                     Node(LiteralString("x")),
                     Node(Reference("Hex")),
                     Node(Reference("Hex"))
                 ]
-            ])
+            ]),
         ]],
         "Hex": [[Node(CharClass([Range("0", "9"), Range("A", "F"), Range("a", "f")]))]],
         "CharClass": [[
@@ -298,22 +305,29 @@ def test_peg_peg():
             Node(LiteralString("]")),
             Node(Reference("Spacing")),
         ]],
-        "ClassItem": [[Node(Reference("ClassChar"))], [Node(Reference("Range"))]],
+        "ClassItem": [[Node(Reference("Range"))], [Node(Reference("ClassChar"))]],
         "Range": [[Node(Reference("ClassChar")), Node(LiteralString("-")), Node(Reference("ClassChar"))]],
-        "ClassChar": [[
-            Node(LiteralString("[")),
-            Node(Reference("ClassItem"), suffix="*"),
-            Node(LiteralString("]")),
-            Node(Reference("Spacing")),
+        "ClassChar": [
+            [Node(Reference("Escape"))], [
+                Node([[
+                    Node(LiteralString("]"), prefix="!"),
+                    Node(Dot()),
+                ]]),
+            ]
+        ],
+        "Whitespace": [[Node(CharClass([" ", "\\t", "\\n", "\\r"]))]],
+        "Spacing": [[
+            Node([
+                [Node(Reference("Whitespace"))],
+                [Node(Reference("Comment"))]
+            ], suffix="*"),
         ]],
-        "Whitespace": [[Node(CharClass([" ", "\\t", "\\r", "\\n"]))]],
-        "Spacing": [[Node(Reference("Whitespace"))], [Node(Reference("Comment"))]],
         "Comment": [[
             Node(LiteralString("#")),
             Node([[Node(LiteralString("\\n"), prefix="!")]], suffix="*"),
             Node([
                 [Node(LiteralString("\\n"))],
-                [Node(EOF())]
+                [Node(Dot(), prefix="!")]
             ]),
         ]],
         "LEFTARROW": [[Node(LiteralString("<-")), Node(Reference("Spacing"))]],

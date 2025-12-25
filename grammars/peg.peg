@@ -2,7 +2,7 @@
 #
 # Syntax is modeled after classic PEG definitions.
 
-Grammar        <- Definition+ EOF
+Grammar        <- Definition+ !.
 Definition     <- Identifier '<-' Expression
 Expression     <- Sequence ('/' Sequence)*
 Sequence       <- Prefix*
@@ -17,9 +17,9 @@ Primary        <- Identifier !'<-'
 Identifier     <- [A-Za-z_] [A-Za-z0-9_]* Spacing
 
 Literal        <- SingleQuoted / DoubleQuoted
-SingleQuoted   <- '\'' CharSingle* '\'' Spacing
+SingleQuoted   <- "'" CharSingle* "'" Spacing
 DoubleQuoted   <- '"' CharDouble* '"' Spacing
-CharSingle     <- Escape / (!'\'' .)
+CharSingle     <- Escape / (!"'" .)
 CharDouble     <- Escape / (!'"' .)
 Escape         <- '\\' (['"\\nrt] / 'x' Hex Hex)
 Hex            <- [0-9A-Fa-f]
@@ -31,7 +31,7 @@ ClassChar      <- Escape / (!']' .)
 
 Whitespace     <- [ \t\n\r]
 Spacing        <- (Whitespace / Comment)*
-Comment        <- '#' (!'\n')* ('\n' / EOF)
+Comment        <- '#' (!'\n')* ('\n' / !.)
 
 LEFTARROW      <- '<-' Spacing
 SLASH          <- '/' Spacing
